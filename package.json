@@ -8,7 +8,8 @@
     "build": "parcel build index.html"
   },
   "dependencies": {
-    "parcel-bundler": "^1.6.1"
+    "parcel-bundler": "^1.6.1",
+    "phaser": "^3.55.2"
   },
   "devDependencies": {
     "@babel/core": "7.2.0",
@@ -20,5 +21,15 @@
   "keywords": [
     "javascript",
     "starter"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JFors-LUT/web-basics-harkka.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JFors-LUT/web-basics-harkka/issues"
+  },
+  "homepage": "https://github.com/JFors-LUT/web-basics-harkka#readme"
 }
