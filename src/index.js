@@ -1,3 +1,5 @@
+let game 
+
 window.onload = function(){
   var config = {
     
@@ -9,7 +11,9 @@ window.onload = function(){
     physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 200 }
+            gravity: { 
+                y: 300,
+            }
         }
     },
 
@@ -18,8 +22,10 @@ window.onload = function(){
         create: create,
         update: update
     }
+    
 };
 
+game = new Phaser.Game(config);
 
 
 function preload ()
@@ -28,10 +34,7 @@ function preload ()
     this.load.image('ground', 'assets/platform.png');
     this.load.image('star', 'assets/star.png');
     this.load.image('bomb', 'assets/bomb.png');
-    this.load.spritesheet('dude', 
-        'assets/dude.png',
-        { frameWidth: 32, frameHeight: 48 }
-    );
+    this.load.spritesheet('dude', 'assets/dude.png', { frameWidth: 32, frameHeight: 48 });
 }
 	
 var platforms;
@@ -44,11 +47,11 @@ function create ()
 
   platforms = this.physics.add.staticGroup();
 
-  platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+  platforms.create(400, 600, 'ground').setScale(2).refreshBody();
 
-  platforms.create(600, 400, 'ground');
+  platforms.create(600, 405, 'ground');
   platforms.create(50, 250, 'ground');
-  platforms.create(750, 220, 'ground');
+  platforms.create(750, 225, 'ground');
 
   player = this.physics.add.sprite(100, 450, 'dude');
 
@@ -58,17 +61,20 @@ function create ()
     stars = this.physics.add.group({
         key: 'star',
         repeat: 11,
+        
         setXY: { x: 12, y: 0, stepX: 70 }
 
         
     });
 
+    
 
     stars.children.iterate(function (child) {
 
     child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
 
     });
+    
 
   this.anims.create({
       key: 'left',
@@ -151,7 +157,6 @@ function update (){
   if (cursors.left.isDown)
   {
       player.setVelocityX(-160);
-
       player.anims.play('left', true);
   }
   else if (cursors.right.isDown)
@@ -173,6 +178,6 @@ function update (){
   }
 }
 
-  var game = new Phaser.Game(config);
+  
   
 }
