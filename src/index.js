@@ -1,183 +1,265 @@
-let game 
+let game;
 
-window.onload = function(){
-  var config = {
+const gameOptions = {
+    dudeGravity: 800,
+    dudeSpeed: 300
+}
+
+window.onload = function() {
+    let gameConfig = {
+        type: Phaser.AUTO,
+        backgroundColor: "#112211",
+        parent: "myGame",
+        scale: {
+
+            width: 800,
+            height: 1000,
+        },
+        pixelArt: true,
+        physics: {
+            default: "arcade",
+            arcade: {
+                gravity: {
+                    y: 0
+                }
+            }
+        },
+        scene: PlayGame
+    }
+
+    game = new Phaser.Game(gameConfig)
+    window.focus();
+}
+
+class PlayGame extends Phaser.Scene {
+
+    constructor() {
+        super("PlayGame")
+        this.score = 0;
+        this.highScore = 0;
+        this.bulletCount = 0;
+    }
+
+
+    preload() {
+        this.load.image('sky', 'assets/sky.png');
+        this.load.image('orb_blue', 'assets/orb-blue.png');
+        this.load.image('orb_red', 'assets/orb-red.png');
+        this.load.image("ground", "assets/platform.png")
+        this.load.image("star", "assets/star.png")
+        this.load.spritesheet("dude", "assets/dude.png", {frameWidth: 32, frameHeight: 48})
+        this.load.image('bomb', 'assets/bomb.png');
+        this.load.image('bullet', 'assets/green_ball.png');
+        
+    }
     
-    type: Phaser.AUTO,
-    width: 800,
-    height: 600,
-    parent: 'myGame',
-    
-    physics: {
-        default: 'arcade',
-        arcade: {
-            gravity: { 
-                y: 300,
+    create() {
+
+        this.bulletCount = 0;
+
+        this.add.image(400, 500, 'sky');
+        this.groundGroup = this.physics.add.group({
+            immovable: true,
+            allowGravity: false
+        })
+
+        this.bombBorder = this.physics.add.group({
+            immovable: true,
+            allowGravity: false
+        })
+
+        for(let i = 0; i < 14; i++) {
+            this.groundGroup.create(Phaser.Math.Between(45, game.config.width), 71*i, "ground").setScale(0.5);
+        }
+
+        this.groundGroup.create(415, 600,"ground").setScale(0.5);
+        this.bombBorder.create(400, 1031,"ground").setScale(2);
+        
+
+        this.dude = this.physics.add.sprite(game.config.width / 2, game.config.height / 2, "dude")
+        this.dude.body.gravity.y = gameOptions.dudeGravity
+        this.physics.add.collider(this.dude, this.groundGroup)
+
+        this.starsGroup = this.physics.add.group({})
+        this.redGroup = this.physics.add.group({})
+        this.blueGroup = this.physics.add.group({})
+        this.bulletGroup = this.physics.add.group();
+        this.bombs = this.physics.add.group();
+
+        
+        this.physics.add.collider(this.bulletGroup, this.groundGroup, bulletRemoval, null, this) //bullets destroyed on hitting with ground object
+        this.physics.add.collider(this.bombs, this.bulletGroup, bombDestructor, null, this)     //bullet hits bomb and both annihilate
+
+        this.physics.add.collider(this.starsGroup, this.groundGroup)
+        this.physics.add.collider(this.redGroup, this.groundGroup)
+        this.physics.add.collider(this.blueGroup, this.groundGroup)
+        this.physics.add.collider(this.bombs, this.groundGroup);
+
+        this.physics.add.collider(this.dude, this.bombs, bombing, null, this);  
+        this.physics.add.collider(this.bombs, this.bombBorder, bombRemoval, null, this) //object to destroy bombs when they hit bottom of the screen
+        
+        this.physics.add.overlap(this.dude, this.starsGroup, this.collectStar, null, this)
+        this.physics.add.overlap(this.dude, this.redGroup, this.collectRed, null, this)
+        this.physics.add.overlap(this.dude, this.blueGroup, this.collectBlue, null, this)
+
+        this.add.image(16, 49, "star")
+        this.highScoreText = this.add.text(2, 3, "High score: "+this.highScore, {fontSize: "30px", fill: "#ffffff"})
+        this.scoreText = this.add.text(32, 35, "0", {fontSize: "30px", fill: "#ffffff"})
+        
+        this.cursors = this.input.keyboard.createCursorKeys()
+
+        this.anims.create({
+            key: "left",
+            frames: this.anims.generateFrameNumbers("dude", {start: 0, end: 3}),
+            frameRate: 10,
+            repeat: -1
+        })
+        this.anims.create({
+            key: "turn",
+            frames: [{key: "dude", frame: 4}],
+            frameRate: 10,
+        })
+
+        this.anims.create({
+            key: "right",
+            frames: this.anims.generateFrameNumbers("dude", {start: 5, end: 9}),
+            frameRate: 10,
+            repeat: -1
+        })
+
+        this.triggerTimer = this.time.addEvent({
+            callback: this.addGround,
+            callbackScope: this,
+            delay: 1400,
+            loop: true
+        })
+
+        function bombing (dude, bombs)
+        {
+
+        if (this.score > this.highScore){
+            this.highScore = this.score
+        }
+        this.score = 0  
+        this.bulletCount = 0
+        this.scene.start("PlayGame");
+
+        }
+
+        function bombRemoval(bombs){
+            bombs.destroy()
+        }
+
+        function bulletRemoval(bullet){
+            bullet.destroy()
+            this.bulletCount -= 1
+        }
+
+        function bombDestructor(bombs, bullet){
+            bombs.destroy()
+            bullet.destroy()
+            this.bulletCount -= 1
+        }
+
+    } //end of create
+
+    addGround() {
+        console.log("Adding new stuff!")
+        this.groundGroup.create(Phaser.Math.Between(35, game.config.width), 0, "ground").setScale(0.5) //modified ground spawn to make smaller blocks
+        this.groundGroup.setVelocityY(gameOptions.dudeSpeed / 6)
+
+        if(Phaser.Math.Between(0, 1)) {                                                             
+            this.blueGroup.create(Phaser.Math.Between(0, game.config.width), 0, "orb_blue")
+            this.blueGroup.setVelocityY(gameOptions.dudeSpeed)
+
+        }else if(Phaser.Math.Between(-1, -0,4)){
+            this.redGroup.create(Phaser.Math.Between(0, game.config.width), 0, "orb_red")
+            this.redGroup.setVelocityY(gameOptions.dudeSpeed*2)
+
+        } else {
+            for(let i = 0; i<Math.floor((this.score/5)); i++){                                          //bombs start spawning after reaching 5 score
+                var bomb = this.bombs.create(Phaser.Math.Between(0, game.config.width), 0, 'bomb');
+                bomb.setBounce(0.98);
+                bomb.setCollideWorldBounds(true);
+                bomb.setVelocity(Phaser.Math.Between(-200, 200), Phaser.Math.Between(150, 300));             
             }
         }
-    },
-
-    scene: {
-        preload: preload,
-        create: create,
-        update: update
     }
-    
-};
 
-game = new Phaser.Game(config);
+    collectStar(dude, star) {
+        this.score += 1
+        star.disableBody(true, true)
+        this.scoreText.setText(this.score)
+    }
+    collectRed(dude, red) {
+        this.score += 3
 
+        red.disableBody(true, true)
+        this.scoreText.setText(this.score)
+    }
+    collectBlue(dude, blue) {
+        this.score += 1
 
-function preload ()
-{
-    this.load.image('sky', 'assets/sky.png');
-    this.load.image('ground', 'assets/platform.png');
-    this.load.image('star', 'assets/star.png');
-    this.load.image('bomb', 'assets/bomb.png');
-    this.load.spritesheet('dude', 'assets/dude.png', { frameWidth: 32, frameHeight: 48 });
+        blue.disableBody(true, true)
+        this.scoreText.setText(this.score)
+    }
+
+        
+    fire() {
+
+        if(this.bulletCount < 1){       //only 1 bullet alive at a time
+        
+            var bullet = this.bulletGroup.create(this.dude.x, this.dude.y, 'bullet'); //bullet spawns at player cordinates
+            this.bulletCount += 1;
+            bullet.setBounce(1);
+            bullet.setCollideWorldBounds(true);
+            this.physics.moveTo(bullet,this.game.input.mousePointer.x, 
+                this.game.input.mousePointer.y,gameOptions.dudeSpeed*3) //bullet velocity to the direction of the mouse pointer
+            
+    }
 }
-	
-var platforms;
-var score = 0;
-var scoreText;
 
-function create ()
-{
-  this.add.image(400, 300, 'sky');
-
-  platforms = this.physics.add.staticGroup();
-
-  platforms.create(400, 600, 'ground').setScale(2).refreshBody();
-
-  platforms.create(600, 405, 'ground');
-  platforms.create(50, 250, 'ground');
-  platforms.create(750, 225, 'ground');
-
-  player = this.physics.add.sprite(100, 450, 'dude');
-
-  player.setBounce(0.2);
-  player.setCollideWorldBounds(true);   
-
-    stars = this.physics.add.group({
-        key: 'star',
-        repeat: 11,
-        
-        setXY: { x: 12, y: 0, stepX: 70 }
-
-        
-    });
-
-    
-
-    stars.children.iterate(function (child) {
-
-    child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
-
-    });
-    
-
-  this.anims.create({
-      key: 'left',
-      frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
-      frameRate: 10,
-      repeat: -1
-  });
-
-  this.anims.create({
-      key: 'turn',
-      frames: [ { key: 'dude', frame: 4 } ],
-      frameRate: 20
-  });
-
-  this.anims.create({
-      key: 'right',
-      frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
-      frameRate: 10,
-      repeat: -1
-    });
-
-    bombs = this.physics.add.group();
-
-    this.physics.add.collider(bombs, platforms);
-
-    
-
-    this.physics.add.collider(player, platforms);
-    this.physics.add.collider(stars, platforms);
-    this.physics.add.overlap(player, stars, collectStar, null, this);
-    this.physics.add.collider(player, bombs, hitBomb, null, this);  
-
-    scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', fill: '#000' });
-
-    function collectStar (player, star)
-    {
-        star.disableBody(true, true);
-        score += 1;
-        scoreText.setText('Score: ' + score);
-        
-        if (stars.countActive(true) === 0)
-        {
-            stars.children.iterate(function (child) {
-    
-                child.enableBody(true, child.x, 0, true, true);
-    
-            });
-    
-            var x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
-    
-            var bomb = bombs.create(x, 16, 'bomb');
-            bomb.setBounce(1);
-            bomb.setCollideWorldBounds(true);
-            bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
-    
+    update() {
+        if(this.cursors.left.isDown) {
+            this.dude.body.velocity.x = -gameOptions.dudeSpeed
+            this.dude.anims.play("left", true)
         }
-    
+        else if(this.cursors.right.isDown) {
+            this.dude.body.velocity.x = gameOptions.dudeSpeed
+            this.dude.anims.play("right", true)
+        }
+        else {
+            this.dude.body.velocity.x = 0
+            this.dude.anims.play("turn", true)
+        }
+
+        if(this.cursors.up.isDown && this.dude.body.touching.down) {
+            this.dude.body.velocity.y = -gameOptions.dudeGravity / 1.6
+        }
+
+        if(this.dude.x > game.config.width) {
+            this.dude.x = 0
+        }
+        if(this.dude.x < 0) {
+            this.dude.x = game.config.width
+        }
+
+        if(this.dude.y > game.config.height || this.dude.y < 0) {
+            this.scene.start("PlayGame")
+            console.log(this.highScore, this.score)
+            
+            if (this.score > this.highScore){
+                this.highScore = this.score
+            }
+            this.score = 0  
+            this.bulletCount = 0
+
+
+        }
+
+        if (game.input.activePointer.isDown){ this.fire() }
+
     }
 
-    function hitBomb (player, bomb)
-    {
 
-    this.physics.pause();
-
-    player.setTint(0xff0000);
-
-    player.anims.play('turn');
-
-    gameOver = true;
-    }
-      
-    
-
-
-}
-
-function update (){
-  cursors = this.input.keyboard.createCursorKeys();
-
-  if (cursors.left.isDown)
-  {
-      player.setVelocityX(-160);
-      player.anims.play('left', true);
-  }
-  else if (cursors.right.isDown)
-  {
-      player.setVelocityX(160);
-
-      player.anims.play('right', true);
-  }
-  else
-  {
-      player.setVelocityX(0);
-
-      player.anims.play('turn');
-  }
-
-  if (cursors.up.isDown && player.body.touching.down)
-  {
-      player.setVelocityY(-330);
-  }
-}
-
-  
-  
 }
